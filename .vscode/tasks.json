@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "expo-start",
+      "type": "shell",
+      "command": "npx expo start",
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "options": {
+        "cwd": "${workspaceFolder}/apps/AskWhy"
+      }
+    },
+    {
+      "label": "expo-prebuilt-android",
+      "type": "shell",
+      "command": "npx expo prebuild --platform android",
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/AskWhy"
+      }
+    },
+    {
+      "label": "expo-prebuilt-ios",
+      "type": "shell",
+      "command": "npx expo prebuild --platform ios",
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/AskWhy"
+      }
+    },
+    {
+      "label": "install-dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "group": "build",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/AskWhy"
+      }
+    }
+  ]
+}

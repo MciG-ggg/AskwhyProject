@@ -1,5 +1,20 @@
-// Reexport the native module. On web, it will be resolved to ExpoApplistModule.web.ts
-// and on native platforms to ExpoApplistModule.ts
-export { default } from './ExpoApplistModule';
-export { default as ExpoApplistView } from './ExpoApplistView';
-export * from  './ExpoApplist.types';
+import { AppInfo } from './ExpoApplist.types';
+import ExpoApplistModule from "./ExpoApplistModule";
+
+export { AppInfo, AppListError } from './ExpoApplist.types';
+
+export function getApplist(): AppInfo[] {
+  return ExpoApplistModule.getApplist();
+}
+
+export function getApplistAsync(): Promise<AppInfo[]> {
+  return ExpoApplistModule.getApplistAsync();
+}
+
+export function getUserApps(): AppInfo[] {
+  return ExpoApplistModule.getUserApps();
+}
+
+export function getUserAppsAsync(): Promise<AppInfo[]> {
+  return ExpoApplistModule.getUserAppsAsync();
+}

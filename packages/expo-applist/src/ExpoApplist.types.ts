@@ -1,19 +1,12 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+export interface AppInfo {
+  name: string;
+  packageName: string;
+  iconPath?: string;
+  isSystemApp: boolean;
+}
 
-export type OnLoadEventPayload = {
-  url: string;
-};
-
-export type ExpoApplistModuleEvents = {
-  onChange: (params: ChangeEventPayload) => void;
-};
-
-export type ChangeEventPayload = {
-  value: string;
-};
-
-export type ExpoApplistViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
-  style?: StyleProp<ViewStyle>;
-};
+export interface AppListError {
+  code: string;
+  message: string;
+  nativeError?: any;
+}

@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "expo.vscode-expo-tools", // Expo官方工具
+    "ms-vscode.vscode-typescript-next", // TypeScript支持
+    "bradlc.vscode-tailwindcss", // Tailwind CSS支持
+    "esbenp.prettier-vscode", // 代码格式化
+    "dbaeumer.vscode-eslint", // 代码质量检查
+    "formulahendry.auto-rename-tag" // 自动重命名标签
+  ]
+}

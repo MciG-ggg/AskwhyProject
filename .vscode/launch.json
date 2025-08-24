@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Expo (Android)",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx expo start --android",
+            "cwd": "${workspaceFolder}/apps/AskWhy",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Expo (iOS)",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx expo start --ios",
+            "cwd": "${workspaceFolder}/apps/AskWhy",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Run Expo (Web)",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx expo start --web",
+            "cwd": "${workspaceFolder}/apps/AskWhy",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Build Android",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx expo prebuild --platform android && npx eas build --platform android",
+            "cwd": "${workspaceFolder}/apps/AskWhy",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Build iOS",
+            "request": "launch",
+            "type": "node-terminal",
+            "command": "npx expo prebuild --platform ios && npx eas build --platform ios",
+            "cwd": "${workspaceFolder}/apps/AskWhy",
+            "console": "integratedTerminal"
+        }
+    ]
+}

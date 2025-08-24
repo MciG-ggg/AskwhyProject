@@ -1,12 +1,11 @@
 import { NativeModule, requireNativeModule } from 'expo';
+import { AppInfo } from './ExpoApplist.types';
 
-import { ExpoApplistModuleEvents } from './ExpoApplist.types';
-
-declare class ExpoApplistModule extends NativeModule<ExpoApplistModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+declare class ExpoApplistModule extends NativeModule {
+  getApplist: () => AppInfo[];
+  getApplistAsync: () => Promise<AppInfo[]>;
+  getUserApps: () => AppInfo[];
+  getUserAppsAsync: () => Promise<AppInfo[]>;
 }
 
-// This call loads the native module object from the JSI.
 export default requireNativeModule<ExpoApplistModule>('ExpoApplist');
