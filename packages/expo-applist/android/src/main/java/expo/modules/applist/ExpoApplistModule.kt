@@ -68,178 +68,148 @@ class ExpoApplistModule : Module() {
                 throw Exception("无法获取用户应用列表: ${e.message}")
             }
         }
+
+        // 检查是否有使用统计权限
+        Function("hasUsageStatsPermission") {
+            return@Function try {
+                hasUsageStatsPermission()
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        // 获取正在运行的任务（需要权限）
+        Function("getRunningTasks") {
+            return@Function try {
+                getRunningTasks()
+            } catch (e: Exception) {
+                emptyList<Map<String, Any?>>()
+            }
+        }
+
+        // 获取最近的应用启动记录
+        Function("getRecentAppLaunches") {
+            return@Function try {
+                getRecentAppLaunches()
+            } catch (e: Exception) {
+                emptyList<Map<String, Any?>>()
+            }
+        }
     }
 
     private val context: Context
         get() = requireNotNull(appContext.reactContext)
 
-    // 获取完整的应用信息列表
+    // 获取完整的应用信息列表 - 增强版本，获取所有应用
     private fun getInstalledApps(): List<Map<String, Any?>> {
         val packageManager = context.packageManager
+        val allAppsMap = mutableMapOf<String, Map<String, Any?>>() // 使用Map避免重复
         
-        // 尝试多种方法获取应用列表，以获得最完整的结果
-        val allApps = mutableSetOf<String>()
-        val appInfoMap = mutableMapOf<String, Map<String, Any?>>()
+        // 策略1: 使用不同的标志获取应用
+        val flags = listOf(
+            PackageManager.GET_META_DATA,
+            PackageManager.GET_META_DATA or PackageManager.MATCH_UNINSTALLED_PACKAGES,
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                PackageManager.GET_META_DATA or PackageManager.MATCH_ALL
+            } else {
+                PackageManager.GET_META_DATA
+            },
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                PackageManager.GET_META_DATA or PackageManager.MATCH_DISABLED_COMPONENTS
+            } else {
+                PackageManager.GET_META_DATA
+            }
+        )
         
+        flags.forEach { flag ->
+            try {
+                val applications = packageManager.getInstalledApplications(flag)
+                applications.forEach { appInfo ->
+                    try {
+                        if (!allAppsMap.containsKey(appInfo.packageName)) {
+                            val appName = packageManager.getApplicationLabel(appInfo).toString()
+                            val packageName = appInfo.packageName
+                            val isSystemApp = isSystemApp(appInfo)
+                            val iconPath = saveAppIcon(appInfo, packageManager)
+                            
+                            allAppsMap[packageName] = mapOf(
+                                "name" to appName,
+                                "packageName" to packageName,
+                                "iconPath" to iconPath,
+                                "isSystemApp" to isSystemApp
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // 跳过有问题的应用
+                    }
+                }
+            } catch (e: Exception) {
+                // 继续尝试下一个标志
+            }
+        }
+        
+        // 策略2: 通过PackageInfo获取
         try {
-            // 方法1: 使用 getInstalledPackages
             val packages = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
             packages.forEach { packageInfo ->
-                allApps.add(packageInfo.packageName)
-            }
-            
-            // 方法2: 使用 getInstalledApplications 作为补充
-            val applications = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            applications.forEach { appInfo ->
-                allApps.add(appInfo.packageName)
-            }
-            
-            // 为所有发现的应用创建信息映射
-            allApps.forEach { packageName ->
                 try {
-                    val appInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
-                    val appName = packageManager.getApplicationLabel(appInfo).toString()
-                    val isSystemApp = isSystemApp(appInfo)
-                    val iconPath = saveAppIcon(appInfo, packageManager)
-                    
-                    appInfoMap[packageName] = mapOf(
-                        "name" to appName,
-                        "packageName" to packageName,
-                        "iconPath" to iconPath,
-                        "isSystemApp" to isSystemApp
-                    )
-                } catch (e: Exception) {
-                    // 如果获取某个应用信息失败，跳过该应用但不影响其他应用
-                }
-            }
-            
-        } catch (e: Exception) {
-            // 如果上述方法失败，回退到原始方法
-            val packages = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
-            return packages
-                .mapNotNull { packageInfo ->
-                    try {
-                        val appInfo = packageInfo.applicationInfo ?: return@mapNotNull null
+                    val appInfo = packageInfo.applicationInfo
+                    if (appInfo != null && !allAppsMap.containsKey(packageInfo.packageName)) {
                         val appName = packageManager.getApplicationLabel(appInfo).toString()
                         val packageName = packageInfo.packageName
                         val isSystemApp = isSystemApp(appInfo)
                         val iconPath = saveAppIcon(appInfo, packageManager)
                         
-                        mapOf(
+                        allAppsMap[packageName] = mapOf(
                             "name" to appName,
                             "packageName" to packageName,
                             "iconPath" to iconPath,
                             "isSystemApp" to isSystemApp
                         )
-                    } catch (e: Exception) {
-                        null
                     }
+                } catch (e: Exception) {
+                    // 跳过有问题的应用
                 }
-                .sortedBy { (it["name"] as String).lowercase() }
+            }
+        } catch (e: Exception) {
+            // 继续
         }
         
-        return appInfoMap.values.sortedBy { (it["name"] as String).lowercase() }
+        return allAppsMap.values.sortedBy { (it["name"] as String).lowercase() }
     }
 
-    // 获取用户安装的应用列表（排除系统应用）- 强力版本
+    // 获取用户安装的应用列表（排除系统应用）- 增强版本，获取所有应用
     private fun getUserInstalledApps(): List<Map<String, Any?>> {
         val packageManager = context.packageManager
-        val allUserApps = mutableMapOf<String, Map<String, Any?>>()
+        val userAppsMap = mutableMapOf<String, Map<String, Any?>>() // 使用Map避免重复
         
-        // 方法1: 使用 getInstalledPackages 获取所有包
-        try {
-            val packages = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
-            packages.forEach { packageInfo ->
-                try {
-                    val appInfo = packageInfo.applicationInfo
-                    if (appInfo != null && !isSystemApp(appInfo)) {
-                        val appName = packageManager.getApplicationLabel(appInfo).toString()
-                        val packageName = packageInfo.packageName
-                        val iconPath = saveAppIcon(appInfo, packageManager)
-                        
-                        allUserApps[packageName] = mapOf(
-                            "name" to appName,
-                            "packageName" to packageName,
-                            "iconPath" to iconPath,
-                            "isSystemApp" to false
-                        )
-                    }
-                } catch (e: Exception) {
-                    // 跳过有问题的应用
-                }
-            }
-        } catch (e: Exception) {
-            // 如果方法1失败，继续尝试其他方法
-        }
-        
-        // 方法2: 使用 getInstalledApplications 作为补充
-        try {
-            val applications = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            applications.forEach { appInfo ->
-                try {
-                    if (!isSystemApp(appInfo) && !allUserApps.containsKey(appInfo.packageName)) {
-                        val appName = packageManager.getApplicationLabel(appInfo).toString()
-                        val packageName = appInfo.packageName
-                        val iconPath = saveAppIcon(appInfo, packageManager)
-                        
-                        allUserApps[packageName] = mapOf(
-                            "name" to appName,
-                            "packageName" to packageName,
-                            "iconPath" to iconPath,
-                            "isSystemApp" to false
-                        )
-                    }
-                } catch (e: Exception) {
-                    // 跳过有问题的应用
-                }
-            }
-        } catch (e: Exception) {
-            // 如果方法2失败，继续尝试其他方法
-        }
-        
-        // 方法3: 使用 MATCH_UNINSTALLED_PACKAGES 标志尝试获取更多应用
-        try {
-            val packagesWithUninstalled = packageManager.getInstalledPackages(
-                PackageManager.GET_META_DATA or PackageManager.MATCH_UNINSTALLED_PACKAGES
-            )
-            packagesWithUninstalled.forEach { packageInfo ->
-                try {
-                    val appInfo = packageInfo.applicationInfo
-                    if (appInfo != null && !isSystemApp(appInfo) && !allUserApps.containsKey(packageInfo.packageName)) {
-                        val appName = packageManager.getApplicationLabel(appInfo).toString()
-                        val packageName = packageInfo.packageName
-                        val iconPath = saveAppIcon(appInfo, packageManager)
-                        
-                        allUserApps[packageName] = mapOf(
-                            "name" to appName,
-                            "packageName" to packageName,
-                            "iconPath" to iconPath,
-                            "isSystemApp" to false
-                        )
-                    }
-                } catch (e: Exception) {
-                    // 跳过有问题的应用
-                }
-            }
-        } catch (e: Exception) {
-            // 如果方法3失败，继续
-        }
-        
-        // 方法4: 使用 MATCH_ALL 标志（API 23+）
-        try {
+        // 策略1: 使用不同的标志获取应用
+        val flags = listOf(
+            PackageManager.GET_META_DATA,
+            PackageManager.GET_META_DATA or PackageManager.MATCH_UNINSTALLED_PACKAGES,
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                val allPackages = packageManager.getInstalledPackages(
-                    PackageManager.GET_META_DATA or PackageManager.MATCH_ALL
-                )
-                allPackages.forEach { packageInfo ->
+                PackageManager.GET_META_DATA or PackageManager.MATCH_ALL
+            } else {
+                PackageManager.GET_META_DATA
+            },
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                PackageManager.GET_META_DATA or PackageManager.MATCH_DISABLED_COMPONENTS
+            } else {
+                PackageManager.GET_META_DATA
+            }
+        )
+        
+        flags.forEach { flag ->
+            try {
+                val applications = packageManager.getInstalledApplications(flag)
+                applications.forEach { appInfo ->
                     try {
-                        val appInfo = packageInfo.applicationInfo
-                        if (appInfo != null && !isSystemApp(appInfo) && !allUserApps.containsKey(packageInfo.packageName)) {
+                        if (!isSystemApp(appInfo) && !userAppsMap.containsKey(appInfo.packageName)) {
                             val appName = packageManager.getApplicationLabel(appInfo).toString()
-                            val packageName = packageInfo.packageName
+                            val packageName = appInfo.packageName
                             val iconPath = saveAppIcon(appInfo, packageManager)
                             
-                            allUserApps[packageName] = mapOf(
+                            userAppsMap[packageName] = mapOf(
                                 "name" to appName,
                                 "packageName" to packageName,
                                 "iconPath" to iconPath,
@@ -250,12 +220,12 @@ class ExpoApplistModule : Module() {
                         // 跳过有问题的应用
                     }
                 }
+            } catch (e: Exception) {
+                // 继续尝试下一个标志
             }
-        } catch (e: Exception) {
-            // 如果方法4失败，继续
         }
         
-        // 方法5: 尝试通过Intent查询可启动的应用
+        // 策略2: 通过Intent查询可启动的应用
         try {
             val mainIntent = android.content.Intent(android.content.Intent.ACTION_MAIN, null)
             mainIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
@@ -264,13 +234,41 @@ class ExpoApplistModule : Module() {
             launchableApps.forEach { resolveInfo ->
                 try {
                     val packageName = resolveInfo.activityInfo.packageName
-                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                    
-                    if (!isSystemApp(appInfo) && !allUserApps.containsKey(packageName)) {
+                    if (!userAppsMap.containsKey(packageName)) {
+                        val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                        
+                        if (!isSystemApp(appInfo)) {
+                            val appName = packageManager.getApplicationLabel(appInfo).toString()
+                            val iconPath = saveAppIcon(appInfo, packageManager)
+                            
+                            userAppsMap[packageName] = mapOf(
+                                "name" to appName,
+                                "packageName" to packageName,
+                                "iconPath" to iconPath,
+                                "isSystemApp" to false
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    // 跳过有问题的应用
+                }
+            }
+        } catch (e: Exception) {
+            // 继续
+        }
+        
+        // 策略3: 通过PackageInfo获取
+        try {
+            val packages = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
+            packages.forEach { packageInfo ->
+                try {
+                    val appInfo = packageInfo.applicationInfo
+                    if (appInfo != null && !isSystemApp(appInfo) && !userAppsMap.containsKey(packageInfo.packageName)) {
                         val appName = packageManager.getApplicationLabel(appInfo).toString()
+                        val packageName = packageInfo.packageName
                         val iconPath = saveAppIcon(appInfo, packageManager)
                         
-                        allUserApps[packageName] = mapOf(
+                        userAppsMap[packageName] = mapOf(
                             "name" to appName,
                             "packageName" to packageName,
                             "iconPath" to iconPath,
@@ -282,10 +280,40 @@ class ExpoApplistModule : Module() {
                 }
             }
         } catch (e: Exception) {
-            // 如果方法5失败，继续
+            // 继续
         }
         
-        return allUserApps.values.sortedBy { (it["name"] as String).lowercase() }
+        // 策略4: 对于Android 11+，尝试使用更多标志
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            try {
+                // 尝试使用MATCH_ALL标志
+                val allApps = packageManager.getInstalledApplications(
+                    PackageManager.GET_META_DATA or PackageManager.MATCH_ALL
+                )
+                allApps.forEach { appInfo ->
+                    try {
+                        if (!isSystemApp(appInfo) && !userAppsMap.containsKey(appInfo.packageName)) {
+                            val appName = packageManager.getApplicationLabel(appInfo).toString()
+                            val packageName = appInfo.packageName
+                            val iconPath = saveAppIcon(appInfo, packageManager)
+                            
+                            userAppsMap[packageName] = mapOf(
+                                "name" to appName,
+                                "packageName" to packageName,
+                                "iconPath" to iconPath,
+                                "isSystemApp" to false
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // 跳过有问题的应用
+                    }
+                }
+            } catch (e: Exception) {
+                // 继续
+            }
+        }
+        
+        return userAppsMap.values.sortedBy { (it["name"] as String).lowercase() }
     }
 
     private fun isSystemApp(appInfo: ApplicationInfo): Boolean {
@@ -329,6 +357,47 @@ class ExpoApplistModule : Module() {
             }
         } catch (e: IOException) {
             throw IOException("无法保存应用图标: ${e.message}")
+        }
+    }
+
+    // 检查是否有使用统计权限
+    private fun hasUsageStatsPermission(): Boolean {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+                val mode = appOps.checkOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+                mode == android.app.AppOpsManager.MODE_ALLOWED
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // 获取正在运行的任务
+    private fun getRunningTasks(): List<Map<String, Any?>> {
+        return try {
+            // 注意：从Android 5.0开始，getRunningTasks只能获取自己的任务
+            // 这里返回空列表，因为获取其他应用的运行任务需要特殊权限
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    // 获取最近的应用启动记录
+    private fun getRecentAppLaunches(): List<Map<String, Any?>> {
+        return try {
+            // 这个功能需要使用UsageStatsManager，需要特殊权限
+            // 目前返回空列表，实际实现需要用户授权使用统计权限
+            emptyList()
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }

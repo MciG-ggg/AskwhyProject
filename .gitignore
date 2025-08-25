@@ -1,3 +1,162 @@
-node_modules
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+.env
+
+# typescript
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Android
+apps/*/android/app/build/
+apps/*/android/build/
+apps/*/android/.gradle/
+apps/*/android/captures/
+apps/*/android/gradlew
+apps/*/android/gradlew.bat
+apps/*/android/local.properties
+*.keystore
+!debug.keystore
+
+# iOS
+apps/*/ios/build/
+apps/*/ios/Pods/
+apps/*/ios/*.xcworkspace/xcuserdata/
+apps/*/ios/*.xcodeproj/xcuserdata/
+apps/*/ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+apps/*/ios/Podfile.lock
+
+# Expo modules
+packages/*/build/
+packages/*/lib/
+packages/*/android/build/
+packages/*/android/.gradle/
+packages/*/ios/build/
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# Temporary folders
+tmp/
+temp/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Documentation (keep README files)
 *.md 
-!READMD.md
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE.md
+
+# App-specific
+apps/*/app-icons/
+apps/*/assets/cache/
